@@ -15,5 +15,5 @@ except PackageNotFoundError:  # pragma: no cover
 finally:
     del version, PackageNotFoundError
 
-from .pike13 import Pike13
+from .pike13 import Pike13, Pike13DataFrames
 from .util import expand_custom, month_range, one_month_ago, one_month_before, one_month_after, last_event_date, end_of_today

@@ -9,6 +9,8 @@ from more_itertools import chunked
 from pymongo import MongoClient
 from pymongo import UpdateOne
 from pymongo.database import Database
+from functools import cached_property
+from ratelimit import limits, sleep_and_retry
 
 from tenacity import retry, wait_fixed, stop_after_attempt, before_sleep_log, retry_if_exception_type
 from .util import *
@@ -223,7 +225,6 @@ class Pike13:
             sort=[("created_at", -1)]
         )
 
-
         if not last_visit:
             return EARLIEST_DATE.astimezone(pytz.utc)
         else:
@@ -300,6 +301,39 @@ class Pike13:
                 events.append(p)
 
         return events
+
+    def get_new_events(self):
+        """Get all events"""
+
+        api_endpoint = '/api/v2/desk/events'
+
+        eo_event_ids = set([e['event_id'] for e in self.event_occs])
+        extant_event_ids = set([e['id'] for e in self.events])
+
+        remain_ids = list(eo_event_ids - extant_event_ids)
+
+        logger.debug(f"{len(eo_event_ids)} event occs, {len(extant_event_ids)} events, {len(remain_ids)} remain")
+
+        for chunked_ids in chunked(remain_ids, 100):
+            id_list = ','.join(str(e) for e in chunked_ids)
+            for page in self.pike13_get_pages(api_endpoint, ids=id_list):
+                for e in page['events']:
+                    yield e
+    def get_recent_events(self):
+        """Get the recent, because the API doesn't allow
+        filtering by updated time"""
+
+        api_endpoint = '/api/v2/desk/events'
+
+        start = (datetime.now() - relativedelta(months=1))\
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+
+        end = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0)
+
+        for page in self.pike13_get_pages(api_endpoint, from_=start.isoformat() + 'Z', to_=end.isoformat() + 'Z'):
+            for e in page['events']:
+                yield e
+
 
     def get_visits_for_occurrances(self, occs: List = None):
         """ Get the visits for recent but completed events.
@@ -551,14 +585,14 @@ class Pike13:
         try:
             docs = [_f(doc) for doc in docs] # Yes, must be inside and duplicated. maybe insert_many modifies?
             result = collection.insert_many(docs, ordered=False)
-            logger.debug(f"Inserted {len(result.inserted_ids)} new visits")
+            logger.debug(f"Inserted {len(result.inserted_ids)} new docs")
         except Exception as e:
             try:
                 docs = [_f(doc) for doc in docs] # Yes, must be inside and duplicated. maybe insert_man modifies?
                 result = collection.bulk_write(
                   [UpdateOne({'id': doc['id']}, {'$set': doc}, upsert=True) for doc in docs]
                 )
-                logger.debug(f"Upserted {result.upserted_count}  visits")
+                logger.debug(f"Upserted {result.upserted_count}  docs")
             except:
                 print(docs)
                 raise
@@ -576,17 +610,25 @@ class Pike13:
 
         logger.debug(f"Updating event occurrances since {self.last_event_occ_end_time()}")
 
-        events = []
+        events_occs = []
         for ranged_events in self.get_event_occs():
 
             logger.info(f"Found {len(ranged_events)} new event occurrancess")
-            events.extend(ranged_events)
+            events_occs.extend(ranged_events)
             if ranged_events:
                 self.db.event_occs.bulk_write(
                     [UpdateOne({'id': doc['id']}, {'$set': doc}, upsert=True) for doc in ranged_events]
                 )
 
-        return events
+        return events_occs
+
+    def update_events(self):
+
+        for events_chunk in chunked(self.get_new_events(), 250):
+            self.write_many_or_upsert(self.db.events, events_chunk)
+
+        for events_chunk in chunked(self.get_recent_events(), 250):
+            self.write_many_or_upsert(self.db.events, events_chunk)
 
     def update(self):
         """Update the database with new data from Pike13"""
@@ -594,3 +636,78 @@ class Pike13:
         self.update_people()
         self.update_event_occs()
         self.update_visits()
+        self.update_events()
+
+
+class Pike13DataFrames:
+
+    def __init__(self, pike13: Pike13):
+        self.p13 = pike13
+
+    @cached_property
+    def people(self):
+        return pd.DataFrame(self.p13.people).rename(columns={'id':'person_id'})
+
+    @cached_property
+    def parents(self):
+        return pd.DataFrame(self.p13.parents).rename(columns={'id':'person_id'})
+
+    @cached_property
+    def students(self):
+        return pd.DataFrame(self.p13.students).rename(columns={'id':'person_id'})
+
+    @cached_property
+    def active_students(self):
+        return pd.DataFrame(self.p13.active_students)
+
+    @cached_property
+    def services(self):
+        return pd.DataFrame(self.p13.get_services())\
+            [['id','name','type','duration_in_minutes','maximum_clients','category_id','category_name']]\
+            .rename(columns={'id':'service_id','name':'service_name'})
+
+    @cached_property
+    def locations(self):
+        return pd.DataFrame(self.p13.locations)[['id', 'name', 'latitude', 'longitude']].rename(
+            columns={'id': 'location_id', 'name': 'location_name'})
+
+    @cached_property
+    def event_occurrences(self):
+        evento = pd.DataFrame(self.p13.event_occs)[
+            ['id', 'event_id', 'name', 'service_id', 'location_id', 'state', 'visits_count',
+             'start_at','end_at']] \
+            .rename(columns={'id': 'event_occurrence_id', 'name': 'event_name'})
+
+        for c in ['start_at', 'end_at']:
+            evento[c] = pd.to_datetime(evento[c], errors='ignore')
+
+        evento['occ_month'] = evento.start_at.dt.to_period('M')
+        evento['occ_week'] = evento.start_at.dt.to_period('W')
+        evento['dow'] = evento.start_at.dt.dayofweek
+        return evento
+
+    @cached_property
+    def visits(self):
+        visits =  pd.DataFrame(self.p13.visits)[
+            ['id', 'state', 'status', 'person_id', 'event_occurrence_id',
+             'cancelled_at', 'noshow_at', 'registered_at',
+             'completed_at']].rename(columns={'id': 'visit_id'})
+
+        for c in ['cancelled_at', 'noshow_at', 'registered_at', 'completed_at']:
+            visits[c] = pd.to_datetime(visits[c], errors='ignore')
+
+        visits['visit_month'] = visits.completed_at.dt.to_period('M')
+        visits['visit_week'] = visits.completed_at.dt.to_period('W')
+        visits['dow'] = visits.completed_at.dt.dayofweek
+        return visits
+
+
+    @cached_property
+    def events(self):
+        events =  pd.DataFrame(self.p13.events).drop(columns=['icals', '_id']).rename(
+            columns={'id': 'event_id', 'name': 'event_name'})
+        events['occ_start_month'] = events.start_at.dt.to_period('M')
+        for c in ['start_at', 'end_at']:
+            events[c] = pd.to_datetime(events[c], errors='ignore')
+
+        return events
