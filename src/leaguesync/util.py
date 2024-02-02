@@ -1,16 +1,15 @@
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, Tuple, List
 
 from dateutil.relativedelta import relativedelta
-from dotenv import load_dotenv, dotenv_values
-import os
-from pathlib import Path
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
+from dotenv import dotenv_values
 
-EARLIEST_DATE = datetime.fromisoformat('2015-01-01T00:00:00Z')
+EARLIEST_DATE = datetime.fromisoformat(os.environ.get('LEAGUE_BEFORETIMES', '2015-01-01T00:00:00Z'))
 
-def get_config(file: str|Path = None) -> Dict[str, Any]:
+
+def get_config(file: str | Path = None) -> Dict[str, Any]:
 
     if file:
         fp = Path(file)
@@ -24,6 +23,7 @@ def get_config(file: str|Path = None) -> Dict[str, Any]:
     }
 
     return config
+
 
 def path_interp(path: str, **kwargs) -> Tuple[str, Dict[str, Any]]:
     """
@@ -66,11 +66,13 @@ def end_of_today():
 
 
 def one_month_ago():
-    return (datetime.now() - relativedelta(months=1))\
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+    return (datetime.now() - relativedelta(months=1)) \
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+
 
 def one_month_before(dt: datetime):
     return (dt - relativedelta(months=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
 
 def one_month_after(dt: datetime):
     return (dt + relativedelta(months=1)).replace(hour=23, minute=59, second=59, microsecond=0)
@@ -80,20 +82,31 @@ def month_range(start_date, end_date):
     """Generate Month ranges from the start date to the end date """
     while start_date <= end_date:
         yield start_date.replace(hour=0, minute=0, second=0, microsecond=0), \
-               start_date+relativedelta(months=1)
+            start_date + relativedelta(months=1)
         start_date += relativedelta(months=1)
+
+
+def convert_naive(dt: datetime):
+    """Convert a naive datetime to a timezone aware datetime, but only if it is naive"""
+
+    if dt.tzinfo is None:
+        from pytz import utc
+        return utc.localize(dt)
+    else:
+        return dt
+
 
 def last_event_date(events):
     from datetime import datetime
     """Find the end time of the last event in the set"""
-    events = list(sorted(events, key= lambda e: e['end_at']))
+    events = list(sorted(events, key=lambda e: e['end_at']))
     if not events:
         return EARLIEST_DATE
     else:
         return datetime.fromisoformat(events[-1]['end_at'])
 
 
-def expand_custom(p: dict|List) -> dict:
+def expand_custom(p: dict | List) -> dict:
     """Expand the custom fields into the top level of the dictionary as normal
     key/value pairs"""
 
@@ -111,5 +124,3 @@ def expand_custom(p: dict|List) -> dict:
     if 'custom_fields' in d:
         del d['custom_fields']
     return d
-
-
