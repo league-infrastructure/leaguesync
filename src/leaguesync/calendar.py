@@ -273,11 +273,24 @@ class Calendar:
     def is_location(r, l):
         """Return true if the location spec matches something in the record"""
 
-        if isinstance(l, str) and l[0] == '!':
+        if isinstance(l, str) and l[0] == '!': # Negation
             l = l[1:]
             return (r.location_id != l) and (r.location_code != l) and (r.location_name != l)
+        elif isinstance(l, list): # AND a list of terms
+            t = [Calendar.is_location(r, x) for x in l]
+            return all(t)
+        elif isinstance(l, tuple): # OR a list of terms
+            t = [Calendar.is_location(r, x) for x in l]
+            return any(t)
         else:
             return (l is None) or (r.location_id == l) or (r.location_code == l) or (r.location_name == l)
+
+    @staticmethod
+    def filter_location(df, l):
+        """Filter the Pike13 events DataFrame to only include events at the location"""
+
+        return df[df.apply(Calendar.is_location, args=(l,), axis=1)]
+
 
     def pike13_events_df(self, p13: Pike13 = None):
         """Get the events from Pike13 as a DataFrame, form on month ago to now."""
@@ -300,6 +313,11 @@ class Calendar:
             t = t[t.apply(Calendar.is_location, args=(self.location,), axis=1)]
         elif self.event_f:
             t = t[t.apply(self.event_f, axis=1)]
+
+        # Ensure the datetime is timezone-aware, set to UTC
+        for c in ['start_at', 'end_at']:
+            t[c] = t[c].apply(lambda x: convert_naive(x).tz_convert('America/Los_Angeles'))
+
 
         return t
 

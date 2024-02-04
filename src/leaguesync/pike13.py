@@ -18,6 +18,7 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
+PIKE13_BUSINESS_DOMAIN='jtl.pike13.com' # Default business domain
 
 def get_token(config) -> str:
     """Use the OAUTH 2 flow to get an access token. Reads variables from the
@@ -33,7 +34,7 @@ def get_token(config) -> str:
     }
 
     # Where to get the access token
-    business_domain = config['PIKE13_BUSINESS_DOMAIN']
+    business_domain = config.get('PIKE13_BUSINESS_DOMAIN', PIKE13_BUSINESS_DOMAIN)
     token_url = f'https://{business_domain}/oauth/token'
 
     response = requests.post(token_url, data=payload)
