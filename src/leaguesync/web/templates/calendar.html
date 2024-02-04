@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    <pre>{{ content|safe}}</pre>
+
+    {% for event in events %}
+    <div class="event-summary">
+        <p>
+           <span class="event-date">
+                {{ event.when }}
+            </span>
+            <span class="event-name">
+               <a href="https://jtl.pike13.com/group_classes/{{ event.service_id }}">
+                   {{ event.event_name }},</a>
+            </span>
+            <span class="event-location">
+                {{ event.location_name }}
+            </span>
+        </p>
+        <p class="event-description">
+            {{ event.description_short or (event.description if event.description else '') |strip_html }}
+        </p>
+
+    </div>
+    {% endfor %}
+
+{% endblock %}
