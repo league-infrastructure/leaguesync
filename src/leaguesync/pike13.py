@@ -636,7 +636,7 @@ class Pike13:
 
     def update(self):
         """Update the database with new data from Pike13"""
-
+        logger.info("Updating Pike13 data")
         self.update_people()
         self.update_event_occs()
         self.update_visits()
