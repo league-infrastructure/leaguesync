@@ -4,7 +4,7 @@ import os
 import re
 from flask.cli import with_appcontext
 from leaguesync import *
-
+from pathlib import Path
 
 
 
@@ -100,3 +100,17 @@ def includes_str(t: pd.DataFrame, s):
         return any([s in e for e in strs])
 
     return t[t.apply(includes_str, args=(s,), axis=1)]
+
+def render(template_name, *args, **kwargs):
+
+    from jinja2 import Environment, FileSystemLoader
+    import leaguesync.web.templates as tmpl
+
+    tmpl_dir = Path(tmpl.__file__).parent
+
+    environment = Environment(loader=FileSystemLoader(tmpl_dir))
+    environment.filters['strip_html'] = strip_html
+
+    template = environment.get_template(template_name)
+
+    return template.render(*args, **kwargs)
