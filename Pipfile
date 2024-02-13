@@ -10,6 +10,15 @@ tqdm = "*"
 more-itertools = "*"
 requests = "*"
 jupyterlab = "*"
+pymongo = "*"
+ratelimit = "*"
+tenacity = "*"
+python-dotenv = "*"
+google-api-core = "*"
+google-api-python-client = "*"
+google-auth = "*"
+google-auth-httplib2 = "*"
+googleapis-common-protos = "*"
 
 [dev-packages]
 
