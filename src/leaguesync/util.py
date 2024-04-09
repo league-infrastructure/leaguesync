@@ -1,13 +1,16 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Tuple, List
 
 from dateutil.relativedelta import relativedelta
 from dotenv import dotenv_values
 
-EARLIEST_DATE = datetime.fromisoformat(os.environ.get('LEAGUE_BEFORETIMES', '2015-01-01T00:00:00Z'))
-
+try:
+    EARLIEST_DATE = datetime.fromisoformat(os.environ.get('LEAGUE_BEFORETIMES', '2015-01-01T00:00:00Z'))
+except:
+    # for 3.10 and earlier.
+    EARLIEST_DATE = datetime(2015, 1, 1, 0, 0, 0).replace(tzinfo=timezone.utc)
 
 def get_config(file: str | Path = None) -> Dict[str, Any]:
 
