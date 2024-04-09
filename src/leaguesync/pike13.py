@@ -733,7 +733,7 @@ class Pike13DataFrames:
 
         for c in ['start_time', 'end_time', 'created_at', 'updated_at']:
             try:
-                events[c] = events[c].apply(try_convert_datetime) 
+                events[c] = events[c].apply(try_convert_datetime)
             except:
                 raise
 
