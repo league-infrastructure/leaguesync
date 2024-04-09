@@ -20,6 +20,16 @@ logger = logging.getLogger(__name__)
 
 PIKE13_BUSINESS_DOMAIN='jtl.pike13.com' # Default business domain
 
+def try_convert_datetime(x):
+    try:
+        # Try converting the individual value to datetime
+        return pd.to_datetime(x)
+    except ValueError:
+        # If conversion fails, return None or pd.NaT to signify a null value
+        # You can choose to return x to leave the original value as-is instead
+        return pd.NaT  # or return x to keep the original value
+
+
 def get_token(config) -> str:
     """Use the OAUTH 2 flow to get an access token. Reads variables from the
     environment and the ~/.league.env file."""
@@ -705,8 +715,9 @@ class Pike13DataFrames:
              'cancelled_at', 'noshow_at', 'registered_at',
              'completed_at']].rename(columns={'id': 'visit_id'})
 
+
         for c in ['cancelled_at', 'noshow_at', 'registered_at', 'completed_at']:
-            visits[c] = pd.to_datetime(visits[c], errors='ignore')
+            visits[c] = visits[c].apply(try_convert_datetime)
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="Converting to PeriodArray/Index")
@@ -722,7 +733,7 @@ class Pike13DataFrames:
 
         for c in ['start_time', 'end_time', 'created_at', 'updated_at']:
             try:
-                events[c] = pd.to_datetime(events[c])
+                events[c] = events[c].apply(try_convert_datetime) 
             except:
                 raise
 
