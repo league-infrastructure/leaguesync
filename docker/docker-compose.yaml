@@ -3,7 +3,23 @@ version: '3.8'
 services:
   leaguesync:
     build: .
-    container_name: leaguesync-container
+    container_name: leaguesync-sync
+
+    volumes:
+      - leaguesync-data:/opt/leaguesync-data
 
     restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    container_name: leaguesync-nginx
+    volumes:
+      - leaguesync-data:/usr/share/nginx/html:ro
+    ports:
+      - "8087:80"
+
+    restart: unless-stopped
+
+volumes:
+  leaguesync-data:
 

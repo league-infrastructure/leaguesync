@@ -141,6 +141,7 @@ def extract(args):
     s = p13.students
     s = expand_custom(s)
     s = pd.DataFrame(s)
+
     s.to_csv(dd / 'students_expanded.csv', index=False)
 
     pdf.visits.to_parquet(dd / 'visits.parquet')

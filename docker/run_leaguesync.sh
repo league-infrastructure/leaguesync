@@ -2,6 +2,6 @@
 
 set -e
 
-leaguesync -c /etc/league-remote.env -vv sync 
+leaguesync -c /etc/leaguesync.env -vv sync 
 
-leaguesync -vv extract -d /opt/leaguesync-data
+leaguesync  -c /etc/leaguesync.env -vv extract -d /opt/leaguesync-data

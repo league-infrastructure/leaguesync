@@ -1,2 +1,6 @@
-* * * * *  date
-*/2 * * * *  /opt/run_leaguesync.sh
+PATH=/bin:/usr/bin:/usr/local/bin:/opt
+#* * * * *  date >/proc/1/fd/1 2>/proc/1/fd/2
+*/30 * * * *  /opt/run_leaguesync.sh >/proc/1/fd/1 2>/proc/1/fd/2
+
+
+ 
