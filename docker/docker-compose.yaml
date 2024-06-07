@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  leaguesync:
+    build: .
+    container_name: leaguesync-container
+
+    restart: unless-stopped
+

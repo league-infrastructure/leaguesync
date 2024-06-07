@@ -1,24 +1,26 @@
 import logging
+import warnings
+from datetime import timedelta
 from functools import cached_property
 
 import pandas as pd
 import pytz
 import requests
-from leaguesync.mongokv import MongoKV
 from more_itertools import chunked
 from pymongo import MongoClient
 from pymongo import UpdateOne
 from pymongo.database import Database
 from ratelimit import limits, sleep_and_retry
 from tenacity import retry, wait_fixed, stop_after_attempt, before_sleep_log, retry_if_exception_type
+
+from leaguesync.mongokv import MongoKV
 from .util import *
 from .util import EARLIEST_DATE
-import warnings
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-PIKE13_BUSINESS_DOMAIN='jtl.pike13.com' # Default business domain
+PIKE13_BUSINESS_DOMAIN = 'jtl.pike13.com'  # Default business domain
+
 
 def try_convert_datetime(x):
     try:
@@ -62,8 +64,6 @@ class Pike13:
     def __init__(self, config_file: str | Path | dict = None):
         """Initialize the Pike13 class. This will get the access token and
         initialize the API client."""
-
-
         self.config = get_config(config_file) if isinstance(config_file, (str, Path)) else config_file
 
         self.token = get_token(self.config)
@@ -678,12 +678,12 @@ class Pike13DataFrames:
     def services(self):
         return pd.DataFrame(self.p13.get_services()) \
             [['id', 'name', 'type', 'duration_in_minutes', 'maximum_clients', 'category_id', 'category_name',
-              'description','description_short','instructions']] \
+              'description', 'description_short', 'instructions']] \
             .rename(columns={'id': 'service_id', 'name': 'service_name'})
 
     @cached_property
     def locations(self):
-        t =  pd.DataFrame(self.p13.locations)[['id', 'name', 'latitude', 'longitude']].rename(
+        t = pd.DataFrame(self.p13.locations)[['id', 'name', 'latitude', 'longitude']].rename(
             columns={'id': 'location_id', 'name': 'location_name'})
 
         # Extract the code from the location_name, the code in the parens,
@@ -714,7 +714,6 @@ class Pike13DataFrames:
             ['id', 'state', 'status', 'person_id', 'event_occurrence_id',
              'cancelled_at', 'noshow_at', 'registered_at',
              'completed_at']].rename(columns={'id': 'visit_id'})
-
 
         for c in ['cancelled_at', 'noshow_at', 'registered_at', 'completed_at']:
             visits[c] = visits[c].apply(try_convert_datetime)
