@@ -18,10 +18,10 @@ RUN pip install -r /opt/requirements.txt
 RUN pip install git+https://github.com/league-infrastructure/leaguesync.git #3
 
 
-COPY league-remote.env /etc/league-remote.env
+COPY leaguesync.env /etc/leaguesync.env
 COPY run_leaguesync.sh  /opt/run_leaguesync.sh
 COPY crontab /etc/crontab
-COPY entrypoint.sh /opt/entrypoint.sh
+
 
 RUN crontab /etc/crontab
 

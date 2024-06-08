@@ -15,7 +15,7 @@ The docker configuration in the `docker` directory will:
 * Write out a set of data files
 * Serve the files over nginx
 
-The files are:
+The files that are served by the web server are:
 
 * event_occ.csv
 * events.csv
@@ -28,7 +28,12 @@ The files are:
 * visits.parquet
 
 
-The files are available from the root of the web server. 
+The files are available from the root of the web server. The server uses basic auth, so, for instance:
+
+  https://code:4life@p13sync.do.jointheleague.org/people.csv
 
 To run the container, you will have to copy `leaguesync.env.template` to `leaguesync.env` 
 and set the secrets and urls
+
+Run this behind a caddy proxy based on  https://github.com/lucaslorentz/caddy-docker-proxy.git
+
