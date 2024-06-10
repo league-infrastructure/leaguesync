@@ -2,6 +2,12 @@
 
 set -e
 
-leaguesync -c /etc/leaguesync.env -vv sync 
+echo '============= LeagueSync ============'> /opt/leaguesync-data/log.txt
+date >> /opt/leaguesync-data/log.txt
 
-leaguesync  -c /etc/leaguesync.env -vv extract -d /opt/leaguesync-data
+leaguesync -c /etc/leaguesync.env -vv sync  | tee -a /opt/leaguesync-data/log.txt
+
+leaguesync  -c /etc/leaguesync.env -vv extract -d /opt/leaguesync-data | tee -a /opt/leaguesync-data/log.txt
+
+date >> /opt/leaguesync-data/log.txt
+

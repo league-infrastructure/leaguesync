@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3'
 
 services:
   leaguesync:
@@ -19,22 +19,16 @@ services:
     labels:
       caddy: p13sync.do.jointheleague.org
       caddy.reverse_proxy: "{{upstreams 80}}"
-      #Password: caddy hash-password --plaintext '4life'
-      #caddy.basicauth: "code $2a$14$wbz/q7FylNxYEGnBcwL0furpv4S0y.Oh/27jF3fIg/txzcD7eTRri"
-    
+      
+      caddy.basicauth: "*"
+      caddy.basicauth.code: ${PASSWORD}
+
     restart: unless-stopped
 
     networks:
       - caddy
 
 
-  whoami:
-    image: traefik/whoami
-    networks:
-      - caddy
-    labels:
-      caddy: whoami.do.jointheleague.org
-      caddy.reverse_proxy: "{{upstreams 80}}"
 
 volumes:
   leaguesync-data:

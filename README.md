@@ -33,7 +33,7 @@ The files are available from the root of the web server. The server uses basic a
   https://code:4life@p13sync.do.jointheleague.org/people.csv
 
 To run the container, you will have to copy `leaguesync.env.template` to `leaguesync.env` 
-and set the secrets and urls
+and set the secrets and urls. Then copy private.env.template to .env and set the basic auth password. 
 
 Run this behind a caddy proxy based on  https://github.com/lucaslorentz/caddy-docker-proxy.git
 
